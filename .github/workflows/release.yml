@@ -18,6 +18,8 @@ jobs:
           cache: false
       - name: Test
         run: go test ./...
+      - name: Install NSIS
+        run: sudo apt-get update && sudo apt-get install -y nsis
       - name: Build release archives
         env:
           VERSION: ${{ github.ref_name }}
@@ -42,12 +44,35 @@ jobs:
             cp README.md LICENSE "dist/$name/"
             if [ "$os" = windows ]; then
               (cd dist && zip -qr "$name.zip" "$name")
+              mkdir -p "dist/windows/$arch"
+              cp "dist/$name/envsync.exe" "dist/windows/$arch/envsync.exe"
             else
               (cd dist && tar -czf "$name.tar.gz" "$name")
             fi
             rm -rf "dist/$name"
           done
-          (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
+      - name: Build Windows installers
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          release_version=${VERSION#v}
+          case "$release_version" in
+            *.*.*) product_version="${release_version}.0" ;;
+            *) echo "release version must have the form vMAJOR.MINOR.PATCH" >&2; exit 1 ;;
+          esac
+          for arch in amd64 arm64; do
+            makensis \
+              -DVERSION="$release_version" \
+              -DPRODUCT_VERSION="$product_version" \
+              -DARCH="$arch" \
+              -DSOURCE_DIR="$GITHUB_WORKSPACE" \
+              -DINPUT_BINARY="$GITHUB_WORKSPACE/dist/windows/$arch/envsync.exe" \
+              -DOUTPUT_FILE="$GITHUB_WORKSPACE/dist/envsync_windows_${arch}_setup.exe" \
+              packaging/windows/envsync.nsi
+          done
+          rm -rf dist/windows
+          (cd dist && sha256sum *.tar.gz *.zip *.exe > checksums.txt)
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

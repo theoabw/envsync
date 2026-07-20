@@ -36,8 +36,9 @@ curl -fsSL https://envsync.tabw.dev/install.sh | sh
 
 The installer detects your OS and architecture, verifies the release checksum,
 and places `envsync` in `~/.local/bin`. Set `ENVSYNC_INSTALL_DIR` to choose
-another directory. Windows users can download the appropriate archive from the
-repository's Releases page and place `envsync.exe` on their `PATH`.
+another directory. Windows users can download the appropriate setup executable
+from the repository's Releases page. It installs `envsync` for the current user
+and adds it to `PATH`; open a new terminal after installation.
 
 To build from source with Go 1.25 or newer:
 
